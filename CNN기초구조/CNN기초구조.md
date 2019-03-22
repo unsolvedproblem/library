@@ -491,7 +491,7 @@ with tf.Session() as sess:
 ~~~
 with tf.Session() as sess:
     saver.restore(sess, './cnn_alexnet.ckpt')
-    print('test accuracy %g' % sess.run(accuracy,feed_dict={X_image: test, y:test_labels, keep_prob: 0.5}))
+    print('test accuracy %g' % sess.run(accuracy,feed_dict={X_image: test, y:test_labels, keep_prob: 1.}))
 ~~~
 이미지 추가
 
@@ -738,7 +738,7 @@ with tf.Session() as sess:
     for epoch in range(n_epochs):
         num = 0
         for X_batch, y_batch in shuffle_batch(train_data, labels, batch_size):
-            _, y_pred = sess.run([train_step, y_conv], feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.5})
+            _, y_pred = sess.run([train_step, y_conv], feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.4})
             if num % 10 == 0:
                 acc_batch = accuracy.eval(feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.5})
                 print(num, "미니 배치 데이터 정확도:", acc_batch)
@@ -748,5 +748,11 @@ with tf.Session() as sess:
         print('epoch', epoch, "인 데이터 정확도:", acc_batch)        
 
     save_path = saver.save(sess, "./cnn_googlenet.ckpt")
+~~~
+이미지 추가
+~~~
+with tf.Session() as sess:
+    saver.restore(sess, './cnn_googlenet.ckpt')
+    print('test accuracy %g' % sess.run(accuracy,feed_dict={X_image: test, y:test_labels, keep_prob: 1.}))
 ~~~
 이미지 추가
