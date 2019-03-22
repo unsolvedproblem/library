@@ -482,7 +482,7 @@ with tf.Session() as sess:
         for X_batch, y_batch in shuffle_batch(train, train_labels, batch_size):
             sess.run(train_step, feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.5})
         if epoch % 10 == 0:
-            acc_batch = accuracy.eval(feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.5})
+            acc_batch = accuracy.eval(feed_dict={X_image: train, y: train_labels, keep_prob: 0.5})
             print('epoch', epoch, "인 데이터 정확도:", acc_batch)        
 
     save_path = saver.save(sess, "./cnn_alexnet.ckpt")
@@ -729,24 +729,18 @@ def shuffle_batch(X, y, batch_size):
 init = tf.global_variables_initializer()
 saver = tf.train.Saver()
 
-n_epochs = 30
-batch_size = 25
+n_epochs = 100
+batch_size = 10
 
 with tf.Session() as sess:
     init.run()
 
     for epoch in range(n_epochs):
-        num = 0
         for X_batch, y_batch in shuffle_batch(train_data, labels, batch_size):
-            _, y_pred = sess.run([train_step, y_conv], feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.4})
-            if num % 10 == 0:
-                acc_batch = accuracy.eval(feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.5})
-                print(num, "미니 배치 데이터 정확도:", acc_batch)
-            num += 1
-
-        acc_batch = accuracy.eval(feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.4})
-        print('epoch', epoch, "인 데이터 정확도:", acc_batch)        
-
+            sess.run(train_step, feed_dict={X_image: X_batch, y: y_batch, keep_prob: 0.4})
+        if epoch % 10 == 0:
+            acc_batch = accuracy.eval(feed_dict={X_image: train, y: train_labels, keep_prob: 0.4})
+            print(num, "인 데이터 정확도:", acc_batch)
     save_path = saver.save(sess, "./cnn_googlenet.ckpt")
 ~~~
 이미지 추가
