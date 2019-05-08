@@ -1,13 +1,4 @@
-"""
-뉴스 자동분류 서비스
-1. 토큰화
-2. word2vec, bow
-3. 새로운 query를 포함한 문서 추출
-4. tf-idf, tf-idf 클러스터링, kmeans, dbscan, 시각화
-5. doc2vec, doc2vec 클러스터링, kmeans, dbscan, 시각화
-6. tf-idf+ count
-- 멀캠 뉴사이트
-"""
+#libraries
 import numpy as np
 import pandas as pd
 import matplotlib
@@ -25,25 +16,28 @@ from gensim.models.doc2vec import Doc2Vec, TaggedDocument
 from sklearn.cluster import KMeans
 from sklearn.cluster import DBSCAN
 
-matplotlib.rc('font', family='NanumBarunGothic')
-plt.rcParams['axes.unicode_minus'] = False
+def readme(): 
+    print("******Description*****")
+    print("code by 현호킴, description by 승현백")
+    print("클래스 이름.help() : 해당 클래스에서 사용할 수 있는 함수 출력")
+    print("******Class names******")
+    print("1) 데이터 불러오기 : Pickle2DF")
+    print("2) 전처리 : PreprocessingText")
+    print("3) 불용어,유의어 처리 : GetSimilarWords, GetStopWords")
+    print("4) 문서 검색 :  GetDocsFromQuery")
+    print("5) 벡터화 :  Vectorizer")
+    print("6) 시각화 : Get2DPlot, AnalyzingNewsData")
+    print("**********************")
 
-
-class MulCamNewSightTokenize:
-    def __init__(self, add_dict=None, stopwords=None):
-        self.reg_reporter = re.compile('[가-힣]+\s[가-힣]*기자')  # 기자
-        self.reg_email = re.compile('[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')  # 이메일
-        self.reg_eng = re.compile('[a-z]+')  # 소문자 알파벳, 이메일 제거용, 대문자는 남겨둔다
-        self.reg_chi = re.compile("[\u4e00-\u9fff]+")  # 한자
-        self.reg_sc = re.compile("·|…|◆+|◇+|▶+|●+|▲+|“|”|‘|’|\"|\'|\(|\)")  # 특수문자
-        self.reg_date = re.compile('\d+일|\d+월|\d+년|\d+시|\d+분|\(현지시간\)|\(현지시각\)|\d+')  # 날짜,시간,숫자
-        self.add_dict = add_dict
-        self.stopwords = stopwords
+# 1) 데이터 불러오기
+class Pickle2DF:
+    def help(self):
+        print("******Pickle2DF******")
+        print("1) get_dataframe('피클 경로') : 피클을 데이터프레임으로 반환")
+        print("2) get_dataframe_from_list('피클 경로를 저장한 리스트') : 피클여러개를 데이터프레임으로 구성된 리스트로 반환")
+        print("**********************")
 
     def get_dataframe(self, data_name_with_route):
-        """
-        load news data
-        """
         with open(data_name_with_route, 'rb') as file:
             data_list = []
             while True:
@@ -69,9 +63,6 @@ class MulCamNewSightTokenize:
         return news_data
 
     def get_dataframe_from_list(self, data_names):
-        """
-        주소가 저장되어있는 리스트에서 data frame 만들기
-        """
         news_data_list = []
         for data_name in data_names:
             news_data = self.get_dataframe(data_name)
@@ -83,10 +74,29 @@ class MulCamNewSightTokenize:
         data.drop(['index'], axis=1, inplace=True)
         return data
 
+# 2) 전처리
+class PreprocessingText:
+    def help(self):
+        print("******PreprocessingText******")
+        print("1) make_content_re('dataframe') : content 열 전처리 후, 'content_re'열에 저장")
+        print("2) add_noun_dict('list') : 명사 사전에 단어 추가")
+        print("3) add_stopwords('list') : 불용어 사전에 단어 추가")
+        print("4) tokenize('dataframe') : 데이터 프레임에 'tokenized_doc' 열을 추가하고, 토큰화된 문서를 저장한다")
+        print("*****************************")
+
+    def __init__(self):
+        self.reg_reporter = re.compile('[가-힣]+\s[가-힣]*기자')  # 기자
+        self.reg_email = re.compile('[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')  # 이메일
+        self.reg_eng = re.compile('[a-z]+')  # 소문자 알파벳, 이메일 제거용, 대문자는 남겨둔다
+        self.reg_chi = re.compile("[\u4e00-\u9fff]+")  # 한자
+        self.reg_sc = re.compile("·|…|◆+|◇+|▶+|●+|▲+|“|”|‘|’|\"|\'|\(|\)")  # 특수문자
+        self.reg_date = re.compile('\d+일|\d+월|\d+년|\d+시|\d+분|\(현지시간\)|\(현지시각\)|\d+')  # 날짜,시간,숫자
+        
+        self.twitter_obj = Twitter()
+        self.stopwords = []
+        self.noun_list = []
+
     def preprocessing(self, doc):
-        """
-        정규표현식 전처리 함수
-        """
         tmp = re.sub(self.reg_reporter, '', doc)
         tmp = re.sub(self.reg_email, '', tmp)
         tmp = re.sub(self.reg_eng, '', tmp)
@@ -98,36 +108,50 @@ class MulCamNewSightTokenize:
     def make_content_re(self, data):
         data['content_re'] = data['content'].apply(self.preprocessing)
         return data
+    
+    def add_noun_dict(self,noun_list):
+        self.twitter_obj.add_dictionary(noun_list, 'Noun')
+        self.noun_list = self.noun_list+noun_list
+        print("추가한 명사")
+        print(noun_list)
 
-    def show_add_dict(self):
-        print('add_dict: ', self.add_dict)
-
-    def show_stopwords(self):
-        print('stopwords: ', self.stopwords)
+    def add_stopwords(self,stopword_list):
+        self.stopwords = self.stopwords+stopword_list
+        print("추가한 불용어")
+        print(stopword_list)
 
     def tokenize(self, data):
-        print('add_dict:', self.add_dict)
+        print('추가한 명사:',self.noun_list)
         print('불용어: ', self.stopwords)
-        twitter = Twitter()
-        twitter.add_dictionary(self.add_dict, 'Noun')
-        tokenized_doc = data['content_re'].apply(lambda x: twitter.nouns(x))
+        tokenized_doc = data['content_re'].apply(lambda x: self.twitter_obj .nouns(x))
         tokenized_doc_without_stopwords = tokenized_doc.apply(
             lambda x: [item.lower() for item in x if item not in self.stopwords])
         data["tokenized_doc"] = tokenized_doc_without_stopwords
         return data
 
+# 3) 불용어, 유의어 처리
+class GetSimilarWords:
+    def help(self):
+        print("******GetSimilarWords******")
+        print("1) get_model('토큰화된 문서 시리즈','doc2vec 후 차원 크기') : doc2vec 모델 학습")
+        print("2) get_similar_words('단어') : 유의어 출력")
+        print("*****************************")
 
-class GetSimilarWords(Word2Vec):
     def get_model(self, tokenized_doc, size=300, window=5, min_count=5, workers=4, sg=1):
         self.model = Word2Vec(sentences=tokenized_doc, size=size, window=window, min_count=min_count, workers=workers,
                               sg=sg)
-
     def get_similar_words(self, string):
+        print('단어 : 유사도')
         for word, score in self.model.wv.most_similar(string):
-            print(word)
-
+            print(f'{word} : {score}')
 
 class GetStopWords:
+    def help(self):
+        print("******GetStopWords******")
+        print("1)get_bow('토큰화된 문서 시리즈') : bow 생성")
+        print("2)get_stop_words('단어 출현 빈도 순위  n ') : 단어 출현 빈도 상위 n 개, 하위 n 개 출력")
+        print("*****************************")
+
     def get_bow(self, sentences):
         self.tmp_list = []
         for doc in sentences:
@@ -138,11 +162,17 @@ class GetStopWords:
     def get_stop_words(self, number):
         stop_words_candi = self.word_count_idx[:number] + self.word_count_idx[-number:]
         for word in stop_words_candi:
-            print(word)
+            print(word) 
 
-
+# 4) 문서 검색
 class GetDocsFromQuery:
-    def __init__(self, query):
+    def help(self):
+        print("******GetDocsFromQuery******")
+        print("1)set_query('검색어') : 검색어 설정 ")
+        print("2)select_news('토큰화된 문서 시리즈') : 검색어를 포함한 문서 시리즈 반환")
+        print("*****************************")
+
+    def set_query(self,query):
         self.query = query
 
     def select_news(self, tokenized_doc):
@@ -154,8 +184,15 @@ class GetDocsFromQuery:
         print("length of original data: ", len(tokenized_doc))
         return tokenized_doc.iloc[selected_news]
 
-
+# 4) 벡터화
 class Vectorizer:
+    def help(self):
+        print("******GetDocsFromQuery******")
+        print("1)get_tfidf_vec('토큰화된 문서 시리즈','단어 수') : 문서를 tfidf 벡터(x) 와 단어(words)로 반환")
+        print("2)get_doc2vec('토큰화된 문서 시리즈') : doc2vec 벡터 반환")
+        print("3)load_doc2vec_model('토큰화된 문서 시리즈','모델객체이름') : 저장된 모델로  doc2vec 벡터 반환")    
+        print("*****************************")
+
     def get_tfidf_vec(self, query_doc, max_feat=None):
         query_doc = query_doc.apply(lambda x: ' '.join(x))
         obj = TfidfVectorizer(max_features=max_feat)  # max_features for lda
@@ -211,8 +248,12 @@ class Vectorizer:
         x_doc2vec = np.array(x_doc2vec)
         return x_doc2vec
 
-
+# 5) 시각화
 class Get2DPlot:
+
+    def help(self):
+        print('아 난해하다 알아서 쓰세요')
+
     def __init__(self, x, reduction_method="PCA",
                  learning_rate=200, init='pca', random_state=10,
                  cluster_method="DBSCAN", eps=7, min_sample=2, n_clusters=3):
@@ -261,10 +302,22 @@ class Get2DPlot:
         plt.title('%s Plot of %s' % (self.reduction_method, self.cluster_method), fontsize=20)
         plt.xlabel('x', fontsize=14)
         plt.ylabel('y', fontsize=14)
-        plt.show()
-
+        plt.show() 
 
 class AnalyzingNewsData:
+
+    def help(self):
+        print("******AnalyzingNewsData******")
+        print("1)get_n_data_per_cluster('라벨 리스트') : 클러스터 별 문서 개수 반환")
+        print("2)print_news_per_cluster('토큰화된 문서 시리즈','클러스터 라벨 리스트') : 클러스터 라벨별로 제목을 출력한다.")
+        print("*****************************")
+
+
+    def get_n_data_per_cluster(self, cluster_labels):
+        tmp = pd.DataFrame(pd.Series(cluster_labels).value_counts(), columns=['counts'])
+        tmp.index.name = 'cluster'
+        return tmp
+
     def print_news_per_cluster(self, data, clusters, content='title'):
         for n in clusters:
             print('=' * 100, n)
@@ -275,4 +328,3 @@ class AnalyzingNewsData:
                 except:
                     break
             print('=' * 100, n)
-
